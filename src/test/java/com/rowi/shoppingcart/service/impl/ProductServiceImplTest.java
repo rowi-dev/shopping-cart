@@ -62,11 +62,11 @@ class ProductServiceImplTest {
         List<ProductRateResponse> productRateResponses = productService.getProductPriceById(id, count);
         Assertions.assertEquals(count, productRateResponses.size());
 
-        Assertions.assertEquals(new BigDecimal(11), productRateResponses.get(0).getAmount());
+        Assertions.assertEquals(new BigDecimal(11).setScale(2, BigDecimal.ROUND_HALF_UP), productRateResponses.get(0).getAmount());
         Assertions.assertEquals(1, productRateResponses.get(0).getUnit());
         Assertions.assertEquals(0, productRateResponses.get(0).getCartons());
 
-        Assertions.assertEquals(new BigDecimal(100), productRateResponses.get(9).getAmount());
+        Assertions.assertEquals(new BigDecimal(100).setScale(2, BigDecimal.ROUND_HALF_UP), productRateResponses.get(9).getAmount());
         Assertions.assertEquals(0, productRateResponses.get(9).getUnit());
         Assertions.assertEquals(1, productRateResponses.get(9).getCartons());
 
@@ -115,10 +115,10 @@ class ProductServiceImplTest {
         Long id = 1L;
         Product product = getProduct(id);
         return Stream.of(
-                Arguments.arguments(id, 1, 1, 0, product, new BigDecimal(11)),
-                Arguments.arguments(id, 10, 0, 1, product, new BigDecimal(100)),
-                Arguments.arguments(id, 12, 2, 1, product, new BigDecimal(122)),
-                Arguments.arguments(id, 30, 0, 3, product, new BigDecimal(210))
+                Arguments.arguments(id, 1, 1, 0, product, new BigDecimal(11).setScale(2, BigDecimal.ROUND_HALF_UP)),
+                Arguments.arguments(id, 10, 0, 1, product, new BigDecimal(100).setScale(2, BigDecimal.ROUND_HALF_UP)),
+                Arguments.arguments(id, 12, 2, 1, product, new BigDecimal(122).setScale(2, BigDecimal.ROUND_HALF_UP)),
+                Arguments.arguments(id, 30, 0, 3, product, new BigDecimal(210).setScale(2, BigDecimal.ROUND_HALF_UP))
         );
     }
 

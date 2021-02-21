@@ -15,6 +15,7 @@ import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -99,7 +100,7 @@ public class ProductServiceImpl implements ProductService {
         return ProductRateResponse.builder()
                 .unit(retailCount)
                 .qty(i)
-                .amount(cartonAmount.add(retailPrice))
+                .amount((cartonAmount.add(retailPrice)).setScale(2, BigDecimal.ROUND_HALF_UP))
                 .cartons(cartonCount).build();
 
     }
