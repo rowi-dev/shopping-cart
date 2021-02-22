@@ -2,17 +2,15 @@ server:
   port: 8090
 spring:
   datasource:
-    url: jdbc:h2:mem:shopping_cart
+    url: jdbc:h2:mem:shopping_cart;DB_CLOSE_DELAY=-1
     username: sa
     password: sa
     driver-class-name: org.h2.Driver
+    platform: h2
   jpa:
     hibernate:
       ddl-auto: none
       jpa:
         database-platform: org.hibernate.dialect.H2Dialect
-  h2:
-    console:
-      enabled: true
 logging:
   config: classpath:logback-spring.xml

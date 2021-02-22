@@ -1,5 +1,6 @@
 package com.rowi.shoppingcart.service.impl;
 
+import com.rowi.shoppingcart.exception.ApplicationException;
 import com.rowi.shoppingcart.exception.ValueNotExistException;
 import com.rowi.shoppingcart.model.Product;
 import com.rowi.shoppingcart.repository.ProductRepository;
@@ -28,13 +29,13 @@ public class ProductServiceImpl implements ProductService {
     @Autowired
     private MessageSource messageSource;
 
-    private final Logger logger = LoggerFactory.getLogger(ProductServiceImpl.class);
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     @Override
-    public List<ProductResponse> getAllProducts() {
+    public List<ProductResponse> getAllProducts() throws Exception {
         logger.info("Start executing getAllProducts");
         List<Product> products = productRepository.findAll();
-        logger.info(products.size() + " products fetched from DB");
+        logger.info("{} products fetched from DB", products.size());
         List<ProductResponse> productResponses = new ArrayList<>();
         products.forEach(product -> {
             ProductResponse productResponse = ProductResponse.builder()
@@ -48,8 +49,14 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public List<ProductRateResponse> getProductPriceById(Long id, Long recordCount) {
-        logger.info("Start executing getProductPriceById with ID: " + id);
+    public List<ProductRateResponse> getProductPriceById(Long id, Long recordCount) throws Exception {
+        logger.info("Start executing getProductPriceById with ID: {}", id);
+        if (1 > recordCount) {
+            logger.error("recorde count range invalid (count: {})", id);
+            throw new ApplicationException(ApplicationErrorCodes.RECORDE_COUNT_RANGE,
+                    messageSource.getMessage(String.valueOf(ApplicationErrorCodes.RECORDE_COUNT_RANGE),
+                            new Object[]{}, LocaleContextHolder.getLocale()));
+        }
         Optional<Product> optionalProduct = productRepository.findById(id);
         List<ProductRateResponse> productResponses = new ArrayList<>();
         if (optionalProduct.isPresent()) {
@@ -69,8 +76,14 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public ProductRateResponse calculateProductPriceById(Long id, int qty) {
-        logger.info("Start executing getProductPriceById with ID: " + id);
+    public ProductRateResponse calculateProductPriceById(Long id, int qty) throws Exception {
+        logger.info("Start executing calculateProductPriceById with ID: {}", id);
+        if (1 > qty) {
+            logger.error("Qty range invalid (count: {})", id);
+            throw new ApplicationException(ApplicationErrorCodes.QTY_COUNT_RANGE,
+                    messageSource.getMessage(String.valueOf(ApplicationErrorCodes.QTY_COUNT_RANGE),
+                            new Object[]{}, LocaleContextHolder.getLocale()));
+        }
         Optional<Product> optionalProduct = productRepository.findById(id);
         List<ProductRateResponse> productResponses = new ArrayList<>();
         if (optionalProduct.isPresent()) {
@@ -89,18 +102,19 @@ public class ProductServiceImpl implements ProductService {
         int cartonCount = i / product.getCartonSize();
         int retailCount = i % product.getCartonSize();
         BigDecimal retailPrice = product.getCartonPrice().divide(
-                new BigDecimal(product.getCartonSize())).multiply(new BigDecimal(retailCount))
-                .multiply(product.getVariableCostRatio().add(new BigDecimal(100))).divide(new BigDecimal(100));
+                new BigDecimal(product.getCartonSize()), 4, RoundingMode.HALF_UP).multiply(new BigDecimal(retailCount))
+                .multiply(product.getVariableCostRatio().add(new BigDecimal(100))).divide(
+                        new BigDecimal(100), 4, RoundingMode.HALF_UP);
 
         BigDecimal cartonAmount = product.getCartonPrice().multiply(new BigDecimal(cartonCount));
         if (cartonCount >= product.getDiscountLevel()) {
             cartonAmount = cartonAmount.multiply(new BigDecimal(100).subtract(product.getDiscount()))
-                    .divide(new BigDecimal(100));
+                    .divide(new BigDecimal(100), 4, RoundingMode.HALF_UP);
         }
         return ProductRateResponse.builder()
                 .unit(retailCount)
                 .qty(i)
-                .amount((cartonAmount.add(retailPrice)).setScale(2, BigDecimal.ROUND_HALF_UP))
+                .amount((cartonAmount.add(retailPrice)).setScale(2, RoundingMode.HALF_UP))
                 .cartons(cartonCount).build();
 
     }

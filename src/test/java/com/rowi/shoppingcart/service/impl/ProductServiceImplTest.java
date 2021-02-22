@@ -17,19 +17,30 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.MessageSource;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseBuilder;
+import org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.jdbc.Sql;
+import org.springframework.test.context.jdbc.SqlGroup;
 
+import javax.sql.DataSource;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
 @ActiveProfiles(value = "test")
 @SpringBootTest(classes = ShoppingCartApplication.class)
+@AutoConfigureTestDatabase
 class ProductServiceImplTest {
 
     @InjectMocks
@@ -42,18 +53,19 @@ class ProductServiceImplTest {
     private MessageSource messageSource;
 
     @Test
-    @Sql(scripts = {"/query.sql", "/query-import.sql"})
-    void getAllProductsTest() {
+    void getAllProductsTest() throws Exception {
+        List<Product> productList = loadProducts();
+        Mockito.when(productRepository.findAll()).thenReturn(productList);
         List<ProductResponse> productResponses = productService.getAllProducts();
-        Assertions.assertEquals(0, productResponses.size());
+        Assertions.assertEquals(2, productResponses.size());
         productResponses.forEach(productResponse -> {
-            Assertions.assertNotNull(productResponse.getCartonPrice());
-            Assertions.assertNotNull(productResponse.getCartonSize());
+            Assertions.assertNotNull(productResponse.getName());
+            Assertions.assertNotNull(productResponse.getId());
         });
     }
 
     @Test
-    void getProductPriceById() {
+    void getProductPriceById() throws Exception {
         Long id = 1L;
         Long count = 40L;
         Product product = getProduct(id);
@@ -62,11 +74,11 @@ class ProductServiceImplTest {
         List<ProductRateResponse> productRateResponses = productService.getProductPriceById(id, count);
         Assertions.assertEquals(count, productRateResponses.size());
 
-        Assertions.assertEquals(new BigDecimal(11).setScale(2, BigDecimal.ROUND_HALF_UP), productRateResponses.get(0).getAmount());
+        Assertions.assertEquals(new BigDecimal(11).setScale(2, RoundingMode.HALF_UP), productRateResponses.get(0).getAmount());
         Assertions.assertEquals(1, productRateResponses.get(0).getUnit());
         Assertions.assertEquals(0, productRateResponses.get(0).getCartons());
 
-        Assertions.assertEquals(new BigDecimal(100).setScale(2, BigDecimal.ROUND_HALF_UP), productRateResponses.get(9).getAmount());
+        Assertions.assertEquals(new BigDecimal(100).setScale(2, RoundingMode.HALF_UP), productRateResponses.get(9).getAmount());
         Assertions.assertEquals(0, productRateResponses.get(9).getUnit());
         Assertions.assertEquals(1, productRateResponses.get(9).getCartons());
 
@@ -101,7 +113,7 @@ class ProductServiceImplTest {
     @ParameterizedTest
     @MethodSource(value = "calculatorTestSource")
     @DisplayName("Test should pass when method return the expected val and not Exception")
-    void calculateProductPriceByIdTest(Long id, int qty, int unit, int carton, Product product, BigDecimal expected) {
+    void calculateProductPriceByIdTest(Long id, int qty, int unit, int carton, Product product, BigDecimal expected) throws Exception {
 
         Optional<Product> optionalProduct = Optional.of(product);
         Mockito.when(productRepository.findById(id)).thenReturn(optionalProduct);
@@ -115,10 +127,10 @@ class ProductServiceImplTest {
         Long id = 1L;
         Product product = getProduct(id);
         return Stream.of(
-                Arguments.arguments(id, 1, 1, 0, product, new BigDecimal(11).setScale(2, BigDecimal.ROUND_HALF_UP)),
-                Arguments.arguments(id, 10, 0, 1, product, new BigDecimal(100).setScale(2, BigDecimal.ROUND_HALF_UP)),
-                Arguments.arguments(id, 12, 2, 1, product, new BigDecimal(122).setScale(2, BigDecimal.ROUND_HALF_UP)),
-                Arguments.arguments(id, 30, 0, 3, product, new BigDecimal(210).setScale(2, BigDecimal.ROUND_HALF_UP))
+                Arguments.arguments(id, 1, 1, 0, product, new BigDecimal(11).setScale(2, RoundingMode.HALF_UP)),
+                Arguments.arguments(id, 10, 0, 1, product, new BigDecimal(100).setScale(2, RoundingMode.HALF_UP)),
+                Arguments.arguments(id, 12, 2, 1, product, new BigDecimal(122).setScale(2, RoundingMode.HALF_UP)),
+                Arguments.arguments(id, 30, 0, 3, product, new BigDecimal(210).setScale(2, RoundingMode.HALF_UP))
         );
     }
 
@@ -132,6 +144,27 @@ class ProductServiceImplTest {
         product.setDiscountLevel(3);
         product.setVariableCostRatio(new BigDecimal(10));
         return product;
+    }
+
+    private List<Product> loadProducts() {
+        List<Product> productList = new ArrayList<>();
+        Product product = new Product(1L,
+                "penguine Ears",
+                20,
+                new BigDecimal(175),
+                new BigDecimal(10),
+                3,
+                new BigDecimal(30));
+        Product product1 = new Product(2L,
+                "penguine Ears",
+                5,
+                new BigDecimal(825),
+                new BigDecimal(10),
+                3,
+                new BigDecimal(30));
+        productList.add(product);
+        productList.add(product1);
+        return productList;
     }
 
 }
